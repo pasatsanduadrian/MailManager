@@ -9,6 +9,9 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 from dotenv import load_dotenv
 
+
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 load_dotenv()
 FLASK_PORT = int(os.getenv("FLASK_PORT", 5099))
 GRADIO_PORT = int(os.getenv("GRADIO_PORT", 7070))
