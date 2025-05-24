@@ -1,31 +1,16 @@
+# gemini_utils.py
 import google.generativeai as genai
-import os
-import re
-import json
 
 def gemini_label_emails(email_list, api_key):
-    """
-    Trimite la Gemini API o listă de emailuri (listă de dicturi cu from, subject, date)
-    și returnează propuneri de label (ca listă de dicturi {id, label}).
-    """
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-1.5-flash-latest")
-
-    prompt = (
-        "Primești o listă de emailuri cu metadate (From, Subject, Date). "
-        "Propune o clasificare/etichetare pentru fiecare email, folosind ca răspuns o listă JSON cu formatul: "
-        "[{\"id\":..., \"label\":...}]. Dacă nu poți propune un label, folosește \"UNSORTED\".\n"
-        "Lista emailuri:\n"
-    )
-    for email in email_list:
-        prompt += f"\nID: {email['id']}\nFrom: {email['from']}\nSubject: {email['subject']}\nDate: {email['date']}\n"
-    prompt += "\nReturnează doar lista JSON!"
-
-    response = model.generate_content(prompt)
-    match = re.search(r'\[.*\]', response.text, re.DOTALL)
+    prompt = "Primești o listă cu expeditori (from) și subiecte, propune câte un label pentru fiecare, ca JSON cu format: [{\"from\":\"...\", \"label\":\"...\"}]\n\n"
+    for mail in email_list:
+        prompt += f"From: {mail['from']}\nSubject: {mail['subject']}\nDate: {mail['date']}\n\n"
+    prompt += "Persoanele se pun pe formatul Persoane/NumePrenume dacă e vorba de o persoană. Returnează DOAR lista JSON!"
+    out = model.generate_content(prompt)
+    import re, json
+    match = re.search(r'\[.*\]', out.text, re.DOTALL)
     if not match:
-        return [{"id": e['id'], "label": "UNSORTED"} for e in email_list]
-    try:
-        return json.loads(match.group())
-    except Exception:
-        return [{"id": e['id'], "label": "UNSORTED"} for e in email_list]
+        return []
+    return json.loads(match.group())
