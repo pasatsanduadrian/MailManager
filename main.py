@@ -29,7 +29,7 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 SECRET_KEY = os.getenv("SECRET_KEY", "abc123")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Flask APP (OAuth) - identic cu anteriorul
+# Flask APP (OAuth)
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
@@ -134,12 +134,10 @@ def parse_inbox_to_df():
     return pd.DataFrame(rows)
 
 def send_none_to_gemini(table):
-    # Primește tabelul inbox, găsește unde label==None, trimite la Gemini și actualizează tabelul
     if isinstance(table, list):
         df = pd.DataFrame(table)
     else:
         df = table.copy()
-    # Filtru None/NaN pe "Label"
     to_ai = df[df["Label"].isnull() | (df["Label"] == "") | (df["Label"] == "None")]
     if to_ai.empty:
         return df
@@ -152,7 +150,6 @@ def send_none_to_gemini(table):
             "id": row["IDs"].split(";")[0]
         })
     gemini_results = gemini_label_emails(email_list, GEMINI_API_KEY)
-    # Update
     label_map = {e['from']: e['label'] for e in gemini_results}
     for idx in to_ai.index:
         sender = df.at[idx, "From"]
@@ -208,9 +205,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
 
     with gr.Tab("Inbox & Clasificare"):
         inbox_btn = gr.Button("🔄 Parsare Inbox + Matching Rules")
-        inbox_df = gr.Dataframe(label="Inbox (Unique Senders, cu Label)", interactive=True, wrap=True, max_rows=100)
+        inbox_df = gr.Dataframe(label="Inbox (Unique Senders, cu Label)", interactive=True, wrap=True)
         gemini_btn = gr.Button("✨ Clasifică senderii fără label (Gemini)")
-        gemini_df = gr.Dataframe(label="Inbox actualizat cu Gemini", interactive=True, wrap=True, max_rows=100)
+        gemini_df = gr.Dataframe(label="Inbox actualizat cu Gemini", interactive=True, wrap=True)
         move_label = gr.Textbox(label="Label pentru mutare", value="")
         move_btn = gr.Button("📦 Mută pe labelul ales doar rândurile selectate")
         move_out = gr.Textbox(label="Rezultat mutare", lines=4)
