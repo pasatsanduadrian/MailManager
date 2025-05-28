@@ -1,19 +1,27 @@
 # gemini_utils.py
 import google.generativeai as genai
+import re, json
 
-def gemini_label_emails(email_list, api_key):
+def gemini_label_emails(email_list, api_key, context_rules=None):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-1.5-flash-latest")
-    prompt = "Primești o listă cu expeditori (from) și subiecte, propune câte un label pentru fiecare, ca JSON cu format: [{\"from\":\"...\", \"label\":\"...\"}]\n\n"
+    prompt = "Primești o listă cu emailuri (from, subject, date).\n"
+    if context_rules:
+        prompt += "Ai la dispoziție următoarele reguli deja existente, după label și lista de expeditori:\n"
+        prompt += str(context_rules) + "\n"
+    prompt += (
+        "Pentru fiecare email, propune o etichetă potrivită (folosește întâi regulile dacă se potrivește senderul, altfel propune după conținut).\n"
+        "Persoanele se pun pe formatul Persoane/NumePrenume. Returnează rezultatul ca listă JSON: [{\"from\":..., \"subject\":..., \"date\":..., \"label\":...}]\n\n"
+    )
     for mail in email_list:
         prompt += f"From: {mail['from']}\nSubject: {mail['subject']}\nDate: {mail['date']}\n\n"
-    prompt += "Persoanele se pun pe formatul Persoane/NumePrenume dacă e vorba de o persoană. Returnează DOAR lista JSON!"
+    prompt += "Returnează DOAR lista JSON!"
     out = model.generate_content(prompt)
-    import re, json
     match = re.search(r'\[.*\]', out.text, re.DOTALL)
     if not match:
         return []
     return json.loads(match.group())
+
 
 def gemini_summarize_emails(email_list, api_key):
     """
