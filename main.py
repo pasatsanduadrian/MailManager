@@ -15,6 +15,8 @@ from gmail_utils import get_gmail_service
 from export_gmail_to_xlsx import export_labels_and_inbox_xlsx
 from move_from_xlsx import move_emails_from_xlsx
 from gemini_utils import gemini_summarize_emails  # vezi funcția nouă mai jos
+from rules_from_labels import generate_rules_from_labels
+from gemini_labeler import label_inbox_with_gemini
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 load_dotenv()
@@ -177,6 +179,27 @@ def gemini_summarizer_tab(nr_mails):
     summary = gemini_summarize_emails(emails, GEMINI_API_KEY)
     return gr.Markdown(summary)
 
+def gen_rules_func():
+    service = get_gmail_service()
+    if not service:
+        return "Eroare autentificare Gmail."
+    rules = generate_rules_from_labels(service)
+    import json
+    return json.dumps(rules, indent=2, ensure_ascii=False)
+
+def classify_gemini_func():
+    service = get_gmail_service()
+    if not service:
+        return []
+    rules = generate_rules_from_labels(service)
+    out = label_inbox_with_gemini(service, rules, GEMINI_API_KEY, max_inbox=200)
+    # Transformă pentru afișare ca DataFrame
+    import pandas as pd
+    if not out:
+        return pd.DataFrame([{"Status": "Niciun rezultat"}])
+    df = pd.DataFrame(out)
+    return df[["from", "subject", "date", "label"]] if set(["from","subject","date","label"]).issubset(df.columns) else df
+
 # --- UI Layout ---
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("""
@@ -190,6 +213,17 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     <hr>
     """)
 
+    with gr.Tab("Clasificare Gemini & Reguli"):
+        gr.Markdown("### 1️⃣ Generează reguli pentru labeluri Gmail")
+        gen_rules_btn = gr.Button("Generează reguli JSON")
+        rules_out = gr.Code(label="Rules JSON", language="json")
+        gen_rules_btn.click(fn=gen_rules_func, outputs=rules_out)
+
+        gr.Markdown("### 2️⃣ Clasifică Inbox folosind reguli + Gemini LLM")
+        classify_btn = gr.Button("Clasifică Inbox cu Gemini")
+        classify_table = gr.Dataframe(label="Inbox clasificat (cu etichete)", interactive=False)
+        classify_btn.click(fn=classify_gemini_func, outputs=classify_table)
+        
     with gr.Tab("Autentificare & Export/Mutare"):
         auth_status = gr.Markdown(check_auth())
         auth_btn = gr.Button("🔐 Deschide autentificarea Gmail în browser")
