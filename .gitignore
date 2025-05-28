@@ -1,0 +1,6 @@
+.env
+credentials.json
+token.pickle
+.gradio/
+__pycache__/
+*.log
