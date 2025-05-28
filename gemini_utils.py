@@ -15,15 +15,34 @@ def gemini_label_emails(email_list, api_key):
         return []
     return json.loads(match.group())
 
-def summarize_with_gemini(subjects, api_key):
+def gemini_summarize_emails(email_list, api_key):
+    """
+    Primește o listă de emailuri (dicturi cu from, subject, date), returnează un sumar extins (bullet-uri pe teme, categorii principale, exemple).
+    """
+    if not email_list:
+        return "Nu sunt emailuri de sumarizat."
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-1.5-flash-latest")
-    # Construiește prompt sumarizare
     prompt = (
-        "Primești o listă cu subiecte de email primite recent (max 50). "
-        "Fă un rezumat general, în limba română, ce tipuri de teme/paradigme apar cel mai des? "
-        "Fii concis, folosește bullet list.\n\n"
-        + "\n".join(f"- {subj}" for subj in subjects)
+        "Primești o listă de emailuri din Inbox cu From, Subject și Date.\n"
+        "Te rog să generezi un sumar extins pentru utilizator, structurat pe teme principale (ex: Notificări, AI, Financiar, Personal etc). "
+        "Afișează pentru fiecare temă:\n"
+        "- O descriere succintă\n"
+        "- 2-3 exemple de subiecte (bullet)\n"
+        "- Numărul de mailuri pe temă\n"
+        "Grupează mailurile similar ca într-un dashboard inteligent.\n"
+        "Format răspuns:\n"
+        "## Temă: [ex. Notificări/servicii]\n"
+        "- Descriere...\n"
+        "- Subiecte:\n"
+        "  * ...\n"
+        "  * ...\n"
+        "- Total mailuri: ...\n\n"
+        "Iată lista de mailuri:\n"
     )
+    for mail in email_list:
+        prompt += f"From: {mail['from']}\nSubject: {mail['subject']}\nDate: {mail['date']}\n\n"
     out = model.generate_content(prompt)
-    return out.text.strip() if hasattr(out, "text") else str(out)
+    if hasattr(out, "text"):
+        return out.text
+    return str(out)

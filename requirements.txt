@@ -7,3 +7,5 @@ gradio
 pandas
 python-dotenv
 google-generativeai
+xlsxwriter
+plotly
