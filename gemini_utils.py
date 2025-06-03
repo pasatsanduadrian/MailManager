@@ -17,11 +17,26 @@ def gemini_label_emails(email_list, api_key, context_rules=None):
         prompt += f"From: {mail['from']}\nSubject: {mail['subject']}\nDate: {mail['date']}\n\n"
     prompt += "Returnează DOAR lista JSON!"
     out = model.generate_content(prompt)
+    # Robust JSON extraction
     match = re.search(r'\[.*\]', out.text, re.DOTALL)
     if not match:
         return []
-    return json.loads(match.group())
-
+    json_raw = match.group()
+    try:
+        return json.loads(json_raw)
+    except Exception:
+        # Repair: truncate to last valid '}' and close list
+        last_bracket = json_raw.rfind('}')
+        if last_bracket > 0:
+            json_fixed = json_raw[:last_bracket+1]
+            if not json_fixed.endswith(']'):
+                json_fixed += ']'
+            try:
+                return json.loads(json_fixed)
+            except Exception as e2:
+                print("Eroare JSON fix (gemini_utils):", e2)
+                return []
+        return []
 
 def gemini_summarize_emails(email_list, api_key):
     """
