@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from pyngrok import ngrok
 from flask import Flask, request, redirect, session
 from google_auth_oauthlib.flow import Flow
-from google.auth.transport.requests import Request
 import gradio as gr
 import plotly.express as px
 import pandas as pd
@@ -14,25 +13,24 @@ import pandas as pd
 from gmail_utils import get_gmail_service
 from export_gmail_to_xlsx import export_labels_and_inbox_xlsx
 from move_from_xlsx import move_emails_from_xlsx
-from gemini_utils import gemini_summarize_emails  # vezi funcția nouă mai jos
+from move_from_table import move_emails_from_table  # <-- Import nou!
+from gemini_utils import gemini_summarize_emails
 from rules_from_labels import generate_rules_from_labels
 from gemini_labeler import label_inbox_with_gemini
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 load_dotenv()
 
-# --- Config ---
 FLASK_PORT = int(os.getenv("FLASK_PORT", 5099))
 GRADIO_PORT = int(os.getenv("GRADIO_PORT", 7070))
 NGROK_TOKEN = os.getenv("NGROK_TOKEN")
-NGROK_HOSTNAME = os.getenv("NGROK_HOSTNAME")  # ex: stable-guided-buck.ngrok-free.app
+NGROK_HOSTNAME = os.getenv("NGROK_HOSTNAME")
 CREDENTIALS_FILE = 'credentials.json'
 TOKEN_FILE = 'token.pickle'
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 SECRET_KEY = os.getenv("SECRET_KEY", "abc123")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# --- Flask pentru OAuth2 ---
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
@@ -72,7 +70,6 @@ def oauth2callback():
         pickle.dump(creds, token)
     return "<h3 style='color:green;'>PAS /oauth2callback - Token salvat. Autentificare reușită!<br>Poți închide acest tab și reveni în Gradio.</h3>"
 
-# --- Pornește Flask pe thread separat + ngrok stable ---
 ngrok.set_auth_token(NGROK_TOKEN)
 public_url = ngrok.connect(FLASK_PORT, "http", hostname=NGROK_HOSTNAME)
 print("Ngrok stable link:", public_url)
@@ -86,7 +83,6 @@ flask_thread.daemon = True
 flask_thread.start()
 time.sleep(5)
 
-# --- Gradio UI ---
 def check_auth():
     if os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE, "rb") as f:
@@ -116,13 +112,11 @@ def move_xlsx_ui(file):
     move_emails_from_xlsx(service, file.name)
     return "Mutare finalizată! (vezi Gmail)"
 
-# --- Statistici & Grafice ---
 def get_label_stats(service):
     labels = service.users().labels().list(userId='me').execute().get('labels', [])
     label_stats = []
     for l in labels:
         if l.get("type") == "user":
-            # Numărăm câte mailuri în fiecare label (cu paginare!)
             total = 0
             page_token = None
             while True:
@@ -140,7 +134,6 @@ def show_label_stats_and_plot():
     if not service:
         return pd.DataFrame([{"Label": "Neautentificat!", "Count": 0}]), None
     df = get_label_stats(service)
-    # Plotly pentru grafic frumos și interactiv
     fig = px.bar(
         df, x='Label', y='Count',
         text_auto=True,
@@ -159,12 +152,10 @@ def show_label_stats_and_plot():
     fig.update_traces(textfont_size=14)
     return df, fig
 
-# --- Gemini Summarizer Tab ---
 def gemini_summarizer_tab(nr_mails):
     service = get_gmail_service()
     if not service:
         return "Eroare: nu ești autentificat Gmail!"
-    # Extrage ultimele X mailuri din Inbox
     inbox = service.users().messages().list(userId='me', labelIds=['INBOX'], maxResults=nr_mails).execute().get('messages', [])
     emails = []
     for m in inbox:
@@ -175,7 +166,6 @@ def gemini_summarizer_tab(nr_mails):
             "subject": headers.get('Subject', ''),
             "date": headers.get('Date', ''),
         })
-    # Sumar cu Gemini
     summary = gemini_summarize_emails(emails, GEMINI_API_KEY)
     return gr.Markdown(summary)
 
@@ -190,17 +180,22 @@ def gen_rules_func():
 def classify_gemini_func():
     service = get_gmail_service()
     if not service:
-        return []
+        return pd.DataFrame([{"Status": "Neautentificat"}])
     rules = generate_rules_from_labels(service)
     out = label_inbox_with_gemini(service, rules, GEMINI_API_KEY, max_inbox=200)
-    # Transformă pentru afișare ca DataFrame
-    import pandas as pd
     if not out:
         return pd.DataFrame([{"Status": "Niciun rezultat"}])
     df = pd.DataFrame(out)
-    return df[["from", "subject", "date", "label"]] if set(["from","subject","date","label"]).issubset(df.columns) else df
+    # asigură-te că ai 'id', 'from', 'subject', 'date', 'label'
+    cols = [col for col in ['id', 'from', 'subject', 'date', 'label'] if col in df.columns]
+    return df[cols]
 
-# --- UI Layout ---
+def move_table_labels_func(table):
+    service = get_gmail_service()
+    if not service:
+        return "Eroare: nu ești autentificat Gmail!"
+    return move_emails_from_table(service, table)
+
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("""
     <h2 style='color:#1a73e8'>MailManager – Gmail OAuth2 + Workflow Inbox/Labels</h2>
@@ -213,17 +208,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     <hr>
     """)
 
-    with gr.Tab("Clasificare Gemini & Reguli"):
-        gr.Markdown("### 1️⃣ Generează reguli pentru labeluri Gmail")
-        gen_rules_btn = gr.Button("Generează reguli JSON")
-        rules_out = gr.Code(label="Rules JSON", language="json")
-        gen_rules_btn.click(fn=gen_rules_func, outputs=rules_out)
 
-        gr.Markdown("### 2️⃣ Clasifică Inbox folosind reguli + Gemini LLM")
-        classify_btn = gr.Button("Clasifică Inbox cu Gemini")
-        classify_table = gr.Dataframe(label="Inbox clasificat (cu etichete)", interactive=False)
-        classify_btn.click(fn=classify_gemini_func, outputs=classify_table)
-        
     with gr.Tab("Autentificare & Export/Mutare"):
         auth_status = gr.Markdown(check_auth())
         auth_btn = gr.Button("🔐 Deschide autentificarea Gmail în browser")
@@ -239,13 +224,41 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         move_msg = gr.Textbox(label="Status mutare", lines=2)
         move_btn.click(fn=move_xlsx_ui, inputs=upl_file, outputs=move_msg)
 
+        
+    with gr.Tab("Clasificare Gemini & Reguli"):
+        gr.Markdown("### 1️⃣ Generează reguli pentru labeluri Gmail")
+        gen_rules_btn = gr.Button("Generează reguli JSON")
+        rules_out = gr.Code(label="Rules JSON", language="json")
+        gen_rules_btn.click(fn=gen_rules_func, outputs=rules_out)
+
+        gr.Markdown("### 2️⃣ Clasifică Inbox folosind reguli + Gemini LLM")
+        classify_btn = gr.Button("Clasifică Inbox cu Gemini")
+     
+        classify_table = gr.Dataframe(
+            label="Inbox classificat (cu etichete, editabilă doar coloana 'label')",
+            interactive=True,
+            headers=["id", "from", "subject", "date", "label"],
+            datatype=["str", "str", "str", "str", "str"],
+            row_count=10, # sau cât ai nevoie
+            col_count=(5, "Fixed"),
+        )
+
+        
+        classify_btn.click(fn=classify_gemini_func, outputs=classify_table)
+
+        gr.Markdown("#### 3️⃣ Mută emailurile pe labelurile editate")
+        move_labels_btn = gr.Button("Mută mailurile pe labeluri din tabel")
+        move_labels_status = gr.Textbox(label="Status mutare", lines=6)
+        move_labels_btn.click(fn=move_table_labels_func, inputs=classify_table, outputs=move_labels_status)
+
+    
+
     with gr.Tab("Statistici & Grafice"):
         gr.Markdown("#### Distribuție pe labeluri și sumarizare Inbox cu grafice moderne")
         stats_btn = gr.Button("Afișează distribuție labeluri & grafic")
-        label_table = gr.Dataframe(label="Statistici Labeluri", interactive=False, datatype=["str", "number"])  # fără max_rows
+        label_table = gr.Dataframe(label="Statistici Labeluri", interactive=False, datatype=["str", "number"])
         stats_plot = gr.Plot(label="Grafic distribuție")
         stats_btn.click(show_label_stats_and_plot, outputs=[label_table, stats_plot])
-
 
     with gr.Tab("Sumar Gemini (AI)"):
         gr.Markdown("#### Sumar extins cu Gemini LLM pentru ultimele N mailuri din Inbox")
