@@ -17,6 +17,7 @@ from move_from_table import move_emails_from_table  # <-- Import nou!
 from gemini_utils import gemini_summarize_emails
 from rules_from_labels import generate_rules_from_labels
 from gemini_labeler import label_inbox_with_gemini
+from rules_graph import rules_to_plot
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 load_dotenv()
@@ -172,10 +173,11 @@ def gemini_summarizer_tab(nr_mails):
 def gen_rules_func():
     service = get_gmail_service()
     if not service:
-        return "Eroare autentificare Gmail."
+        return "Eroare autentificare Gmail.", None
     rules = generate_rules_from_labels(service)
     import json
-    return json.dumps(rules, indent=2, ensure_ascii=False)
+    fig = rules_to_plot(rules)
+    return json.dumps(rules, indent=2, ensure_ascii=False), fig
 
 def classify_gemini_func():
     service = get_gmail_service()
@@ -196,7 +198,9 @@ def move_table_labels_func(table):
         return "Eroare: nu ești autentificat Gmail!"
     return move_emails_from_table(service, table)
 
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
+css = """#label-table td:nth-child(5){background-color:#fffbea;}"""
+
+with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
     gr.Markdown("""
     <h2 style='color:#1a73e8'>MailManager – Gmail OAuth2 + Workflow Inbox/Labels</h2>
     <ol>
@@ -229,7 +233,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         gr.Markdown("### 1️⃣ Generează reguli pentru labeluri Gmail")
         gen_rules_btn = gr.Button("Generează reguli JSON")
         rules_out = gr.Code(label="Rules JSON", language="json")
-        gen_rules_btn.click(fn=gen_rules_func, outputs=rules_out)
+        rules_plot = gr.Plot(label="Grafic Reguli")
+        gen_rules_btn.click(fn=gen_rules_func, outputs=[rules_out, rules_plot])
 
         gr.Markdown("### 2️⃣ Clasifică Inbox folosind reguli + Gemini LLM")
         classify_btn = gr.Button("Clasifică Inbox cu Gemini")
@@ -239,8 +244,9 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             interactive=True,
             headers=["id", "from", "subject", "date", "label"],
             datatype=["str", "str", "str", "str", "str"],
-            row_count=10, # sau cât ai nevoie
+            row_count=10,
             col_count=(5, "Fixed"),
+            elem_id="label-table",
         )
 
         
