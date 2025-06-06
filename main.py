@@ -9,6 +9,7 @@ from google_auth_oauthlib.flow import Flow
 import gradio as gr
 import plotly.express as px
 import pandas as pd
+import html
 
 from gmail_utils import get_gmail_service, list_user_label_names
 from export_gmail_to_xlsx import export_labels_and_inbox_xlsx
@@ -129,6 +130,11 @@ def get_label_stats(service):
             label_stats.append({"Label": l["name"], "Count": total})
     df = pd.DataFrame(label_stats).sort_values("Count", ascending=False)
     return df
+
+def datalist_html(options, list_id="labels-datalist"):
+    """Returnează un snippet <datalist> cu opțiuni escapate."""
+    escaped = [f"<option value='{html.escape(str(l))}'>" for l in options]
+    return f"<datalist id='{list_id}'>\n" + "\n".join(escaped) + "\n</datalist>"
 
 def show_label_stats_and_plot():
     service = get_gmail_service()
