@@ -10,7 +10,7 @@ import gradio as gr
 import plotly.express as px
 import pandas as pd
 
-from gmail_utils import get_gmail_service
+from gmail_utils import get_gmail_service, list_user_label_names
 from export_gmail_to_xlsx import export_labels_and_inbox_xlsx
 from move_from_xlsx import move_emails_from_xlsx
 from move_from_table import move_emails_from_table  # <-- Import nou!
@@ -153,6 +153,23 @@ def show_label_stats_and_plot():
     fig.update_traces(textfont_size=14)
     return df, fig
 
+def datalist_html(labels):
+    options = "".join(f"<option value='{l}'></option>" for l in labels)
+    return f"""
+    <datalist id='label-options'>
+    {options}
+    </datalist>
+    <script>
+    function attachList(){{
+        const cells=document.querySelectorAll('#label-table td:nth-child(5) input');
+        cells.forEach(c=>c.setAttribute('list','label-options'));
+    }}
+    const ob = new MutationObserver(attachList);
+    ob.observe(document.getElementById('label-table'), {{childList:true, subtree:true}});
+    attachList();
+    </script>
+    """
+
 def gemini_summarizer_tab(nr_mails):
     service = get_gmail_service()
     if not service:
@@ -182,15 +199,17 @@ def gen_rules_func():
 def classify_gemini_func():
     service = get_gmail_service()
     if not service:
-        return pd.DataFrame([{"Status": "Neautentificat"}])
+        return pd.DataFrame([{"Status": "Neautentificat"}]), ""
     rules = generate_rules_from_labels(service)
     out = label_inbox_with_gemini(service, rules, GEMINI_API_KEY, max_inbox=200)
     if not out:
-        return pd.DataFrame([{"Status": "Niciun rezultat"}])
+        return pd.DataFrame([{"Status": "Niciun rezultat"}]), ""
     df = pd.DataFrame(out)
     # asigură-te că ai 'id', 'from', 'subject', 'date', 'label'
     cols = [col for col in ['id', 'from', 'subject', 'date', 'label'] if col in df.columns]
-    return df[cols]
+    labels = list_user_label_names(service)
+    html = datalist_html(labels)
+    return df[cols], html
 
 def move_table_labels_func(table):
     service = get_gmail_service()
@@ -244,13 +263,13 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             interactive=True,
             headers=["id", "from", "subject", "date", "label"],
             datatype=["str", "str", "str", "str", "str"],
-            row_count=10,
+            row_count=(10, "dynamic"),
             col_count=(5, "Fixed"),
             elem_id="label-table",
         )
+        label_suggest = gr.HTML(datalist_html([]))
 
-        
-        classify_btn.click(fn=classify_gemini_func, outputs=classify_table)
+        classify_btn.click(fn=classify_gemini_func, outputs=[classify_table, label_suggest])
 
         gr.Markdown("#### 3️⃣ Mută emailurile pe labelurile editate")
         move_labels_btn = gr.Button("Mută mailurile pe labeluri din tabel")

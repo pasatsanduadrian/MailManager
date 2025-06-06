@@ -46,3 +46,14 @@ def get_inbox_table(service, max_results=100):
             'snippet': snippet
         })
     return out
+
+
+def list_user_label_names(service):
+    """Returnează doar numele labelurilor definite de utilizator."""
+    if not service:
+        return []
+    try:
+        labels = service.users().labels().list(userId='me').execute().get('labels', [])
+        return [l['name'] for l in labels if l.get('type') == 'user']
+    except Exception:
+        return []

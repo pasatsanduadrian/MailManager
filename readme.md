@@ -12,6 +12,7 @@
 - **Generare reguli automate** pentru etichete pe baza istoricului de emailuri
 - **Vizualizare grafică a regulilor** (relație label – expeditor) cu Plotly
 - **Clasificare automată Inbox** cu Gemini LLM și reguli custom, cu editare manuală și mutare rapidă
+- **Editare ușoară a labelurilor** direct în tabel, cu autocomplete din labelurile existente
 - **Statistici și grafice interactive** (Plotly) privind distribuția mailurilor pe etichete
 - **Sumarizare AI** a Inbox-ului sau a oricărui set de emailuri folosind Gemini LLM
 - **Interfață Gradio**, organizată pe tab-uri pentru un flux clar și intuitiv
