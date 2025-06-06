@@ -10,6 +10,7 @@
 - **Export Inbox și etichete Gmail** în XLSX (Excel) – pentru editare manuală rapidă
 - **Import și mutare masivă** a mailurilor pe etichete, direct din fișierul XLSX
 - **Generare reguli automate** pentru etichete pe baza istoricului de emailuri
+- **Vizualizare grafică a regulilor** (relație label – expeditor) cu Plotly
 - **Clasificare automată Inbox** cu Gemini LLM și reguli custom, cu editare manuală și mutare rapidă
 - **Statistici și grafice interactive** (Plotly) privind distribuția mailurilor pe etichete
 - **Sumarizare AI** a Inbox-ului sau a oricărui set de emailuri folosind Gemini LLM
