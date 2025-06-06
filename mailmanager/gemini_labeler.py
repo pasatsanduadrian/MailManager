@@ -1,5 +1,5 @@
 # gemini_labeler.py
-from gemini_utils import gemini_label_emails
+from .gemini_utils import gemini_label_emails
 
 def label_inbox_with_gemini(service, rules, api_key, max_inbox=200):
     # 1. Fetch emails cu id, from, subject, date

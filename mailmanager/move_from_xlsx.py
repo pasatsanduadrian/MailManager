@@ -1,5 +1,5 @@
 import pandas as pd
-from gmail_utils import get_gmail_service
+from .gmail_utils import get_gmail_service
 
 def move_emails_from_xlsx(service, xlsx_path="gmail_labels_inbox.xlsx"):
     df = pd.read_excel(xlsx_path, sheet_name="Inbox")

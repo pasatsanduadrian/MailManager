@@ -10,14 +10,14 @@ import gradio as gr
 import plotly.express as px
 import pandas as pd
 
-from gmail_utils import get_gmail_service
-from export_gmail_to_xlsx import export_labels_and_inbox_xlsx
-from move_from_xlsx import move_emails_from_xlsx
-from move_from_table import move_emails_from_table  # <-- Import nou!
-from gemini_utils import gemini_summarize_emails
-from rules_from_labels import generate_rules_from_labels
-from gemini_labeler import label_inbox_with_gemini
-from rules_graph import rules_to_plot
+from mailmanager.gmail_utils import get_gmail_service
+from mailmanager.export_gmail_to_xlsx import export_labels_and_inbox_xlsx
+from mailmanager.move_from_xlsx import move_emails_from_xlsx
+from mailmanager.move_from_table import move_emails_from_table  # <-- Import nou!
+from mailmanager.gemini_utils import gemini_summarize_emails
+from mailmanager.rules_from_labels import generate_rules_from_labels
+from mailmanager.gemini_labeler import label_inbox_with_gemini
+from mailmanager.rules_graph import rules_to_plot
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 load_dotenv()
