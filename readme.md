@@ -88,3 +88,9 @@
 ## 🤝 Contribuții
 
 Contribuțiile sunt binevenite! Dacă ai sugestii, raportezi bug-uri sau vrei să adaugi noi funcționalități, te rog să deschizi un issue sau să creezi un pull request.
+
+---
+
+## 📜 Licență
+
+Acest proiect este disponibil sub licența MIT. Vezi [LICENSE](LICENSE) pentru detalii.
