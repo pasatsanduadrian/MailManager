@@ -34,6 +34,23 @@
 
 ---
 
+## 🇬🇧 Quick start (English summary)
+
+MailManager is a Gmail workflow toolkit that runs a Flask server behind an
+ngrok tunnel. The application requires a few environment variables which are
+loaded from a `.env` file:
+
+- `NGROK_TOKEN` – your ngrok auth token.
+- `NGROK_HOSTNAME` – the stable hostname reserved in ngrok. This hostname must
+  also be configured as an authorized redirect in Google Cloud Console using the
+  URL `https://<NGROK_HOSTNAME>/oauth2callback`.
+- `SECRET_KEY` – secret key for the Flask session.
+- `GEMINI_API_KEY` – API key for the optional Google Gemini features.
+
+After cloning the repo and installing the dependencies run `python3 main.py`.
+ngrok will print a public address where you can complete the Google OAuth flow
+and access the Gradio interface.
+
 ## 🧑‍💻 Cum rulezi proiectul în Google Colab
 
 1.  **Clonează repo-ul și intră în director**
