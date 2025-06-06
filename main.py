@@ -77,12 +77,6 @@ def run_flask():
 
 def run_app():
     """Pornește Flask+Ngrok și interfața Gradio."""
-    if not NGROK_TOKEN or "TOKENUL_TAU" in NGROK_TOKEN or "tokenul_tău" in NGROK_TOKEN:
-        raise RuntimeError(
-            "Setează o valoare reală pentru NGROK_TOKEN în fișierul .env."
-        )
-    if not NGROK_HOSTNAME:
-        raise RuntimeError("Setează variabila NGROK_HOSTNAME în fișierul .env.")
 
     ngrok.set_auth_token(NGROK_TOKEN)
     public_url = ngrok.connect(FLASK_PORT, "http", hostname=NGROK_HOSTNAME)
