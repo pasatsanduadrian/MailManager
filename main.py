@@ -72,18 +72,27 @@ def oauth2callback():
         pickle.dump(creds, token)
     return "<h3 style='color:green;'>PAS /oauth2callback - Token salvat. Autentificare reușită!<br>Poți închide acest tab și reveni în Gradio.</h3>"
 
-ngrok.set_auth_token(NGROK_TOKEN)
-public_url = ngrok.connect(FLASK_PORT, "http", hostname=NGROK_HOSTNAME)
-print("Ngrok stable link:", public_url)
-print(f"Adaugă la Google Console: {public_url}/oauth2callback")
-
 def run_flask():
     app.run(port=FLASK_PORT, host="0.0.0.0")
 
-flask_thread = Thread(target=run_flask)
-flask_thread.daemon = True
-flask_thread.start()
-time.sleep(5)
+def run_app():
+    """Pornește Flask+Ngrok și interfața Gradio."""
+    if not NGROK_TOKEN or "TOKENUL_TAU" in NGROK_TOKEN or "tokenul_tău" in NGROK_TOKEN:
+        raise RuntimeError(
+            "Setează o valoare reală pentru NGROK_TOKEN în fișierul .env."
+        )
+    if not NGROK_HOSTNAME:
+        raise RuntimeError("Setează variabila NGROK_HOSTNAME în fișierul .env.")
+
+    ngrok.set_auth_token(NGROK_TOKEN)
+    public_url = ngrok.connect(FLASK_PORT, "http", hostname=NGROK_HOSTNAME)
+    print("Ngrok stable link:", public_url)
+    print(f"Adaugă la Google Console: {public_url}/oauth2callback")
+
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    time.sleep(5)
+    demo.launch(share=True, server_port=GRADIO_PORT, server_name="0.0.0.0")
 
 def check_auth():
     if os.path.exists(TOKEN_FILE):
@@ -99,7 +108,7 @@ def check_auth():
 def open_auth_link():
     return f"Deschide <a href='https://{NGROK_HOSTNAME}/auth' target='_blank'>aici</a> pentru autentificare Gmail (OAuth2)."
 
-def export_xlsx_ui(_):
+def export_xlsx_ui():
     service = get_gmail_service()
     if not service:
         return None, "Eroare: nu ești autentificat Gmail!"
@@ -131,7 +140,7 @@ def get_label_stats(service):
     df = pd.DataFrame(label_stats).sort_values("Count", ascending=False)
     return df
 
-def datalist_html(options, list_id="labels-datalist"):
+def datalist_html_options(options, list_id="labels-datalist"):
     """Returnează un snippet <datalist> cu opțiuni escapate."""
     escaped = [f"<option value='{html.escape(str(l))}'>" for l in options]
     return f"<datalist id='{list_id}'>\n" + "\n".join(escaped) + "\n</datalist>"
@@ -159,7 +168,7 @@ def show_label_stats_and_plot():
     fig.update_traces(textfont_size=14)
     return df, fig
 
-def datalist_html(labels):
+def datalist_html_labels(labels):
     options = "".join(f"<option value='{l}'></option>" for l in labels)
     return f"""
     <datalist id='label-options'>
@@ -214,7 +223,7 @@ def classify_gemini_func():
     # asigură-te că ai 'id', 'from', 'subject', 'date', 'label'
     cols = [col for col in ['id', 'from', 'subject', 'date', 'label'] if col in df.columns]
     labels = list_user_label_names(service)
-    html = datalist_html(labels)
+    html = datalist_html_labels(labels)
     return df[cols], html
 
 def move_table_labels_func(table):
@@ -273,7 +282,7 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             col_count=(5, "Fixed"),
             elem_id="label-table",
         )
-        label_suggest = gr.HTML(datalist_html([]))
+        label_suggest = gr.HTML(datalist_html_labels([]))
 
         classify_btn.click(fn=classify_gemini_func, outputs=[classify_table, label_suggest])
 
@@ -313,4 +322,4 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
     """)
 
 if __name__ == "__main__":
-    demo.launch(share=True, server_port=7070)
+    run_app()
