@@ -101,6 +101,12 @@ and access the Gradio interface.
     ```
     După rulare, Colab îți va afișa un link public la care poți accesa interfața Gradio în browser.
 
+## 🔐 Fișierul `token.pickle`
+
+La prima autentificare Gmail se generează local `token.pickle`. În el sunt stocate credențialele OAuth2 care permit accesul ulterior la Gmail fără a repeta pașii de login.
+Fișierul conține date sensibile, deci nu îl partaja și nu îl include în controlul versiunilor (este deja trecut în `.gitignore`).
+Dacă rulezi proiectul într-un mediu public sau partajat, șterge `token.pickle` după utilizare sau păstrează-l într-un loc sigur.
+
 ---
 
 ## 🤝 Contribuții
