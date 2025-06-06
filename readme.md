@@ -11,6 +11,8 @@
 - **Import și mutare masivă** a mailurilor pe etichete, direct din fișierul XLSX
 - **Generare reguli automate** pentru etichete pe baza istoricului de emailuri
 - **Vizualizare grafică a regulilor** (relație label – expeditor) cu Plotly
+- **Grafic interactiv al regulilor** – click pe o etichetă pentru a deschide
+  subgraficul într-un tab nou
 - **Clasificare automată Inbox** cu Gemini LLM și reguli custom, cu editare manuală și mutare rapidă
 - **Editare ușoară a labelurilor** direct în tabel, cu autocomplete din labelurile existente
 - **Statistici și grafice interactive** (Plotly) privind distribuția mailurilor pe etichete
