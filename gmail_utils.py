@@ -52,3 +52,12 @@ def list_user_label_names(service):
     """Returneaza numele etichetelor create de utilizator."""
     labels = service.users().labels().list(userId="me").execute().get("labels", [])
     return [l["name"] for l in labels if l.get("type") == "user"]
+
+    """Returnează doar numele labelurilor definite de utilizator."""
+    if not service:
+        return []
+    try:
+        labels = service.users().labels().list(userId='me').execute().get('labels', [])
+        return [l['name'] for l in labels if l.get('type') == 'user']
+    except Exception:
+        return []
