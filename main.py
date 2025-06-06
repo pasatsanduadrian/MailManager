@@ -36,6 +36,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 cached_rules = None
+cached_classify = None
 
 @app.route("/")
 def index():
@@ -86,6 +87,19 @@ def rules_graph_route():
         cached_rules = generate_rules_from_labels(service)
     html_plot = rules_to_html(cached_rules, focus_label=label)
     return f"<html><head><title>Rules Graph</title></head><body>{html_plot}</body></html>"
+
+@app.route("/classify_table")
+def classify_table_route():
+    """Afișează tabelul de clasificare într-un tab separat."""
+    service = get_gmail_service()
+    if not service:
+        return "<p>Nu ești autentificat Gmail.</p>"
+    global cached_classify
+    if cached_classify is None:
+        return "<p>Nu există rezultate de clasificare.</p>"
+    html_table = cached_classify.to_html(index=False)
+    style = "<style>table{width:100%;table-layout:fixed;}td{word-break:break-word;}</style>"
+    return f"<html><head><title>Clasificare Inbox</title>{style}</head><body>{html_table}</body></html>"
 
 def run_flask():
     app.run(port=FLASK_PORT, host="0.0.0.0")
@@ -225,17 +239,20 @@ def gen_rules_func():
 def classify_gemini_func():
     service = get_gmail_service()
     if not service:
-        return pd.DataFrame([{"Status": "Neautentificat"}]), ""
+        return pd.DataFrame([{"Status": "Neautentificat"}]), "", ""
     rules = generate_rules_from_labels(service)
     out = label_inbox_with_gemini(service, rules, GEMINI_API_KEY, max_inbox=200)
     if not out:
-        return pd.DataFrame([{"Status": "Niciun rezultat"}]), ""
+        return pd.DataFrame([{"Status": "Niciun rezultat"}]), "", ""
     df = pd.DataFrame(out)
     # asigură-te că ai 'id', 'from', 'subject', 'date', 'label'
     cols = [col for col in ['id', 'from', 'subject', 'date', 'label'] if col in df.columns]
     labels = list_user_label_names(service)
     html = datalist_html_labels(labels)
-    return df[cols], html
+    global cached_classify
+    cached_classify = df[cols].copy()
+    link = f"<a href='https://{NGROK_HOSTNAME}/classify_table' target='_blank'>Tab separat</a>"
+    return df[cols], html, link
 
 def move_table_labels_func(table):
     service = get_gmail_service()
@@ -243,7 +260,15 @@ def move_table_labels_func(table):
         return "Eroare: nu ești autentificat Gmail!"
     return move_emails_from_table(service, table)
 
-css = """#label-table td:nth-child(5){background-color:#fffbea;}"""
+css = """
+#label-table table{table-layout:fixed;width:100%;}
+#label-table td,#label-table th{overflow-wrap:anywhere;}
+#label-table td:nth-child(1),#label-table th:nth-child(1){width:120px;}
+#label-table td:nth-child(2),#label-table th:nth-child(2){width:200px;}
+#label-table td:nth-child(3),#label-table th:nth-child(3){width:250px;}
+#label-table td:nth-child(4),#label-table th:nth-child(4){width:160px;}
+#label-table td:nth-child(5),#label-table th:nth-child(5){width:140px;background-color:#fffbea;}
+"""
 
 with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
     gr.Markdown("""
@@ -295,8 +320,9 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
             elem_id="label-table",
         )
         label_suggest = gr.HTML(datalist_html_labels([]))
+        classify_link = gr.HTML()
 
-        classify_btn.click(fn=classify_gemini_func, outputs=[classify_table, label_suggest])
+        classify_btn.click(fn=classify_gemini_func, outputs=[classify_table, label_suggest, classify_link])
 
         gr.Markdown("#### 3️⃣ Mută emailurile pe labelurile editate")
         move_labels_btn = gr.Button("Mută mailurile pe labeluri din tabel")
