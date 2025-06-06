@@ -18,7 +18,7 @@ from move_from_table import move_emails_from_table  # <-- Import nou!
 from gemini_utils import gemini_summarize_emails
 from rules_from_labels import generate_rules_from_labels
 from gemini_labeler import label_inbox_with_gemini
-from rules_graph import rules_to_plot
+from rules_graph import rules_to_plot, rules_to_html
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 load_dotenv()
@@ -35,6 +35,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+cached_rules = None
 
 @app.route("/")
 def index():
@@ -71,6 +72,20 @@ def oauth2callback():
     with open(TOKEN_FILE, "wb") as token:
         pickle.dump(creds, token)
     return "<h3 style='color:green;'>PAS /oauth2callback - Token salvat. Autentificare reușită!<br>Poți închide acest tab și reveni în Gradio.</h3>"
+
+
+@app.route("/rules_graph")
+def rules_graph_route():
+    """Afișează graficul interactiv al regulilor."""
+    label = request.args.get("label")
+    service = get_gmail_service()
+    if not service:
+        return "<p>Nu ești autentificat Gmail.</p>"
+    global cached_rules
+    if cached_rules is None:
+        cached_rules = generate_rules_from_labels(service)
+    html_plot = rules_to_html(cached_rules, focus_label=label)
+    return f"<html><head><title>Rules Graph</title></head><body>{html_plot}</body></html>"
 
 def run_flask():
     app.run(port=FLASK_PORT, host="0.0.0.0")
@@ -198,11 +213,14 @@ def gemini_summarizer_tab(nr_mails):
 def gen_rules_func():
     service = get_gmail_service()
     if not service:
-        return "Eroare autentificare Gmail.", None
+        return "Eroare autentificare Gmail.", None, ""
     rules = generate_rules_from_labels(service)
     import json
+    global cached_rules
+    cached_rules = rules
     fig = rules_to_plot(rules)
-    return json.dumps(rules, indent=2, ensure_ascii=False), fig
+    link = f"<a href='https://{NGROK_HOSTNAME}/rules_graph' target='_blank'>Grafic interactiv</a>"
+    return json.dumps(rules, indent=2, ensure_ascii=False), fig, link
 
 def classify_gemini_func():
     service = get_gmail_service()
@@ -261,7 +279,8 @@ with gr.Blocks(theme=gr.themes.Soft(), css=css) as demo:
         gen_rules_btn = gr.Button("Generează reguli JSON")
         rules_out = gr.Code(label="Rules JSON", language="json")
         rules_plot = gr.Plot(label="Grafic Reguli")
-        gen_rules_btn.click(fn=gen_rules_func, outputs=[rules_out, rules_plot])
+        rules_link = gr.HTML()
+        gen_rules_btn.click(fn=gen_rules_func, outputs=[rules_out, rules_plot, rules_link])
 
         gr.Markdown("### 2️⃣ Clasifică Inbox folosind reguli + Gemini LLM")
         classify_btn = gr.Button("Clasifică Inbox cu Gemini")

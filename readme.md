@@ -11,6 +11,8 @@
 - **Import și mutare masivă** a mailurilor pe etichete, direct din fișierul XLSX
 - **Generare reguli automate** pentru etichete pe baza istoricului de emailuri
 - **Vizualizare grafică a regulilor** (relație label – expeditor) cu Plotly
+- **Grafic interactiv al regulilor** – click pe o etichetă pentru a deschide
+  subgraficul într-un tab nou
 - **Clasificare automată Inbox** cu Gemini LLM și reguli custom, cu editare manuală și mutare rapidă
 - **Editare ușoară a labelurilor** direct în tabel, cu autocomplete din labelurile existente
 - **Statistici și grafice interactive** (Plotly) privind distribuția mailurilor pe etichete
@@ -60,14 +62,23 @@ and access the Gradio interface.
     ```
 
 2.  **Instalează dependințele**
+    Colab are deja versiuni recente pentru majoritatea bibliotecilor.
+    Fișierul `requirements.txt` indică doar versiuni minime, astfel
+    instalarea nu va face downgrade și nu mai este necesară repornirea
+    sesiunii.
     ```bash
-    !pip install -r requirements.txt
+    !pip install -q -r requirements.txt
     ```
 
 3.  **Configurare Ngrok (pentru tunelare locală necesară OAuth2)**
     * Creează un cont gratuit pe [Ngrok](https://ngrok.com/).
     * Obține-ți `AUTHTOKEN` din dashboard-ul Ngrok.
     * Adaugă-l la variabilele de mediu în Colab:
+      ```python
+      import os
+      os.environ["NGROK_TOKEN"] = "tokenul_tău_aici"
+      os.environ["NGROK_HOSTNAME"] = "stable-xxxxx-xxxxx.ngrok-free.app"
+      ```
        
 4.  **Configurare Credențiale Google API (OAuth2)**
     * Accesează [Google Cloud Console](https://console.cloud.google.com/).
@@ -82,22 +93,26 @@ and access the Gradio interface.
 5.  **Configurare Google Gemini API Key**
     * Obține o cheie API pentru Google Gemini de la [Google AI Studio](https://aistudio.google.com/app/apikey).
     * Adaugă cheia API la variabilele de mediu în Colab:
+      ```python
+      import os
+      os.environ["GEMINI_API_KEY"] = "cheia_ta_api"
+      ```
     
-6.  **Rulează aplicația in Colab**
+6.  **Rulează aplicația în Colab**
     ```python
     !git clone https://github.com/pasatsanduadrian/MailManager.git
     %cd MailManager
-    
-    !pip install -r requirements.txt
-    
+
+    !pip install -q -r requirements.txt
+
     with open(".env", "w") as f:
         f.write("SECRET_KEY=random123\n")
-        f.write("GEMINI_API_KEY=tokenul_tău_aici\n")
-        f.write("NGROK_TOKEN=tokenul_tău_aici\n")
+        # Înlocuiește valorile de mai jos cu token-urile tale reale
+        f.write("GEMINI_API_KEY=cheia_ta_api\n")
+        f.write("NGROK_TOKEN=tokenul_tau_ngrok\n")
         f.write("NGROK_HOSTNAME=stable-xxxxx-xxxxx.ngrok-free.app\n")
-    
-    !python3 main.py
 
+    !python3 main.py
     ```
     După rulare, Colab îți va afișa un link public la care poți accesa interfața Gradio în browser.
 
