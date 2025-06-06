@@ -60,8 +60,12 @@ and access the Gradio interface.
     ```
 
 2.  **Instalează dependințele**
+    Colab are deja versiuni recente pentru majoritatea bibliotecilor.
+    Fișierul `requirements.txt` indică doar versiuni minime, astfel
+    instalarea nu va face downgrade și nu mai este necesară repornirea
+    sesiunii.
     ```bash
-    !pip install -r requirements.txt
+    !pip install -q -r requirements.txt
     ```
 
 3.  **Configurare Ngrok (pentru tunelare locală necesară OAuth2)**
@@ -92,21 +96,21 @@ and access the Gradio interface.
       os.environ["GEMINI_API_KEY"] = "cheia_ta_api"
       ```
     
-6.  **Rulează aplicația in Colab**
+6.  **Rulează aplicația în Colab**
     ```python
     !git clone https://github.com/pasatsanduadrian/MailManager.git
     %cd MailManager
-    
-    !pip install -r requirements.txt
-    
+
+    !pip install -q -r requirements.txt
+
     with open(".env", "w") as f:
         f.write("SECRET_KEY=random123\n")
-        f.write("GEMINI_API_KEY=tokenul_tău_aici\n")
-        f.write("NGROK_TOKEN=tokenul_tău_aici\n")
+        # Înlocuiește valorile de mai jos cu token-urile tale reale
+        f.write("GEMINI_API_KEY=cheia_ta_api\n")
+        f.write("NGROK_TOKEN=tokenul_tau_ngrok\n")
         f.write("NGROK_HOSTNAME=stable-xxxxx-xxxxx.ngrok-free.app\n")
-    
-    !python3 main.py
 
+    !python3 main.py
     ```
     După rulare, Colab îți va afișa un link public la care poți accesa interfața Gradio în browser.
 
