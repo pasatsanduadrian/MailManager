@@ -68,6 +68,11 @@ and access the Gradio interface.
     * Creează un cont gratuit pe [Ngrok](https://ngrok.com/).
     * Obține-ți `AUTHTOKEN` din dashboard-ul Ngrok.
     * Adaugă-l la variabilele de mediu în Colab:
+      ```python
+      import os
+      os.environ["NGROK_TOKEN"] = "tokenul_tău_aici"
+      os.environ["NGROK_HOSTNAME"] = "stable-xxxxx-xxxxx.ngrok-free.app"
+      ```
        
 4.  **Configurare Credențiale Google API (OAuth2)**
     * Accesează [Google Cloud Console](https://console.cloud.google.com/).
@@ -82,6 +87,10 @@ and access the Gradio interface.
 5.  **Configurare Google Gemini API Key**
     * Obține o cheie API pentru Google Gemini de la [Google AI Studio](https://aistudio.google.com/app/apikey).
     * Adaugă cheia API la variabilele de mediu în Colab:
+      ```python
+      import os
+      os.environ["GEMINI_API_KEY"] = "cheia_ta_api"
+      ```
     
 6.  **Rulează aplicația in Colab**
     ```python
